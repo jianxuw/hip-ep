@@ -46,7 +46,7 @@ env:
   # key. Remove a PR once it lands in the pinned OGA release.
   OGA_PR_PATCHES: "2685 2691 2705 2712 2792 2801"
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
-  AMDGPU_EP_REF: "f3dccce2a142567da050da1032617fb39db4086a"
+  AMDGPU_EP_REF: "895a96549fb41fb94ff83eb3f2341310fe097782"
   # Space-separated onnxruntime/onnxruntime-ep-amdgpu PR numbers applied on top
   # of AMDGPU_EP_REF.
   AMDGPU_PR_PATCHES: ""
@@ -376,7 +376,7 @@ jobs:
         if: steps.cache-amdgpu.outputs.cache-hit != 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          repository: onnxruntime/onnxruntime-ep-amdgpu
+          repository: jianxuw/onnxruntime-ep-amdgpu
           ref: ${{ env.AMDGPU_EP_REF }}
           path: source-amdgpu
           fetch-depth: 1
