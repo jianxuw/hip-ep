@@ -37,7 +37,7 @@ env:
   # LLVM/MLIR/LLD are sourced from the llvm-project subtree vendored inside
   # rocmlirTriton (external/llvm-project). The repo + pinned commit are read
   # from cmake/deps.txt (single source of truth with the from-source fallback
-  # in cmake/deps.cmake); the commit is the llvm-install cache key.
+  # in cmake/deps.cmake); the commit and local LLVM patches form the cache key.
   ONNXRUNTIME_VERSION: "1.31.0"
   ONNXRUNTIME_PR_PATCHES: ""
   OGA_VERSION: "0.17.0"
@@ -80,9 +80,11 @@ jobs:
           LINE=$(grep -E '^rocmlirtriton;' cmake/deps.txt)
           RT_URL=$(echo "$LINE" | cut -d';' -f2)
           RT_COMMIT=$(echo "$LINE" | cut -d';' -f3)
+          LLVM_PATCH_HASH="${{ hashFiles('source-hip-ep/cmake/llvm-*.patch', 'source-hip-ep/cmake/ApplyLLVMPatches.cmake') }}"
+          test -n "$LLVM_PATCH_HASH"
           echo "url=$RT_URL" >> "$GITHUB_OUTPUT"
           echo "commit=$RT_COMMIT" >> "$GITHUB_OUTPUT"
-          echo "value=dep-llvm-rocmlirtriton-${RT_COMMIT}" >> "$GITHUB_OUTPUT"
+          echo "value=dep-llvm-rocmlirtriton-${RT_COMMIT}-patches-${LLVM_PATCH_HASH}" >> "$GITHUB_OUTPUT"
 
       - name: Probe llvm-install
         id: cache-llvm
@@ -135,6 +137,8 @@ jobs:
           git -C "$SRC" remote add origin "${{ steps.key.outputs.url }}"
           git -C "$SRC" fetch --depth 1 origin "${{ steps.key.outputs.commit }}"
           git -C "$SRC" checkout FETCH_HEAD
+          cmake -DHIP_EP_LLVM_PATCH_SOURCE_DIR="$SRC" \
+            -P "${{ github.workspace }}/source-hip-ep/cmake/ApplyLLVMPatches.cmake"
           cmake -G Ninja -S "$SRC/external/llvm-project/llvm" -B "${{ runner.workspace }}/build-llvm" \
             -DCMAKE_BUILD_TYPE=Release \
             -DLLVM_ENABLE_PROJECTS="clang;mlir;lld" \

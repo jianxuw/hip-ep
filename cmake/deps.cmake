@@ -3,6 +3,7 @@
 # ** Licensed under the MIT License.
 ##
 include(FetchContent)
+include("${CMAKE_CURRENT_LIST_DIR}/ApplyLLVMPatches.cmake")
 
 # Parse cmake/deps.txt into DEP_URL_<name> / DEP_HASH_<name>.
 # Each non-comment line is `name;url;hash`. file(STRINGS) preserves the
@@ -71,6 +72,7 @@ function(_apply_rocmlirtriton_patch src_dir)
     WORKING_DIRECTORY "${src_dir}"
     RESULT_VARIABLE _rc OUTPUT_QUIET ERROR_QUIET)
   if(_rc EQUAL 0)
+    hip_ep_apply_llvm_patches("${src_dir}")
     return()
   endif()
 
@@ -95,6 +97,7 @@ function(_apply_rocmlirtriton_patch src_dir)
       message(FATAL_ERROR "Failed to apply ${_patch} in ${src_dir}")
     endif()
   endforeach()
+  hip_ep_apply_llvm_patches("${src_dir}")
 endfunction()
 
 # ===========================================================================

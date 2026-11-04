@@ -1,0 +1,21 @@
+Backport LLVM e48cebf738716070e97cdf6dd4cff5414f72c451 (PR #216941).
+Default-constructed and moved-from llvm::thread objects have a null handle.
+Return the non-joinable thread ID without calling GetThreadId(NULL), which
+triggers Application Verifier Handles stop 0x303 on Windows.
+
+diff --git a/external/llvm-project/llvm/lib/Support/Windows/Threading.inc b/external/llvm-project/llvm/lib/Support/Windows/Threading.inc
+--- a/external/llvm-project/llvm/lib/Support/Windows/Threading.inc
++++ b/external/llvm-project/llvm/lib/Support/Windows/Threading.inc
+@@ -45,6 +45,11 @@ void llvm_thread_detach_impl(HANDLE hThread) {
+     ReportLastErrorFatal("CloseHandle failed");
+ }
+
+-DWORD llvm_thread_get_id_impl(HANDLE hThread) { return ::GetThreadId(hThread); }
++DWORD llvm_thread_get_id_impl(HANDLE hThread) {
++  // Default-constructed and moved-from threads have no native handle.
++  if (!hThread)
++    return 0;
++  return ::GetThreadId(hThread);
++}
+
+ DWORD llvm_thread_get_current_id_impl() { return ::GetCurrentThreadId(); }
