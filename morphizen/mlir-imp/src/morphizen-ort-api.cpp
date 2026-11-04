@@ -893,7 +893,7 @@ static void initialize_mlir_api() {
   // NodeAttributes API functions - MLIR implementation
   the_mlir_instance_of_morphizen_ort_api.node_attributes_new =
       []() -> morphizen::NodeAttributes * {
-    // Create a new MLIRNodeAttributes with owned context
+    // The caller owns this detached placeholder operation.
     auto *mlir_attrs = mlir_impl::MLIRNodeAttributes::Create();
     return reinterpret_cast<morphizen::NodeAttributes *>(mlir_attrs);
   };
@@ -901,7 +901,9 @@ static void initialize_mlir_api() {
   the_mlir_instance_of_morphizen_ort_api.node_attributes_delete =
       [](morphizen::NodeAttributes *p) -> void {
     if (p) {
-      reinterpret_cast<mlir::Operation *>(p)->erase();
+      // graph_add_node copies the context-owned attributes into the real op;
+      // the temporary placeholder itself is not owned by a graph or context.
+      reinterpret_cast<mlir::Operation *>(p)->destroy();
     }
   };
 
