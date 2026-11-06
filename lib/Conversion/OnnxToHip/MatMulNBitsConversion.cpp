@@ -135,7 +135,18 @@ MatMulNBitsToHip::matchAndRewrite(mlir::Operation *op,
   }
   auto scaleElemSizeAttr = rewriter.getI64IntegerAttr(scaleElemSize);
 
-  auto rt = mlir::cast<mlir::RankedTensorType>(op->getResult(0).getType());
+  auto rt = mlir::dyn_cast<mlir::RankedTensorType>(op->getResult(0).getType());
+  if (!rt) {
+    auto activation = mlir::dyn_cast<mlir::RankedTensorType>(A.getType());
+    auto result =
+        mlir::dyn_cast<mlir::UnrankedTensorType>(op->getResult(0).getType());
+    if (!activation || activation.getRank() < 1 || !result)
+      return rewriter.notifyMatchFailure(
+          op, "cannot infer MatMulNBits result rank");
+    llvm::SmallVector<int64_t> shape(activation.getShape());
+    shape.back() = NAttr.getInt();
+    rt = mlir::RankedTensorType::get(shape, result.getElementType());
+  }
   mlir::Value init = createEmptyTensor(rewriter, loc, rt, A);
 
   // Result type inferred from `init` via InferTypeOpInterface — DPS contract:

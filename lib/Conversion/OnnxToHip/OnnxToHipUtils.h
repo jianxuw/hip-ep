@@ -55,6 +55,43 @@ namespace hip {
 // Helpers
 //===----------------------------------------------------------------------===//
 
+/// Refine an unknown result rank for a shape-preserving operation. Do not
+/// reinterpret an UnrankedTensorType as RankedTensorType: that cast is
+/// unchecked in release builds and shape access can crash the compiler.
+inline mlir::RankedTensorType getRankedResultLike(mlir::Operation *op,
+                                                  unsigned resultIndex,
+                                                  mlir::Value input) {
+  auto result =
+      mlir::dyn_cast<mlir::TensorType>(op->getResult(resultIndex).getType());
+  if (!result)
+    return {};
+  if (auto ranked = mlir::dyn_cast<mlir::RankedTensorType>(result))
+    return ranked;
+  auto source = mlir::dyn_cast<mlir::RankedTensorType>(input.getType());
+  if (!source || source.getElementType() != result.getElementType())
+    return {};
+  return mlir::RankedTensorType::get(source.getShape(),
+                                     result.getElementType());
+}
+
+inline mlir::RankedTensorType
+getBroadcastResultType(mlir::Operation *op, mlir::Value a, mlir::Value b) {
+  if (auto ranked =
+          mlir::dyn_cast<mlir::RankedTensorType>(op->getResult(0).getType()))
+    return ranked;
+  auto result =
+      mlir::dyn_cast<mlir::UnrankedTensorType>(op->getResult(0).getType());
+  auto lhs = mlir::dyn_cast<mlir::RankedTensorType>(a.getType());
+  auto rhs = mlir::dyn_cast<mlir::RankedTensorType>(b.getType());
+  if (!result || !lhs || !rhs)
+    return {};
+  auto shape = mlir::hip::inferBroadcastShape(
+      {lhs.getShape(), rhs.getShape()}, [&] { return op->emitOpError(); });
+  if (mlir::failed(shape))
+    return {};
+  return mlir::RankedTensorType::get(*shape, result.getElementType());
+}
+
 /// Create a tensor.empty for a DPS init operand.  Dynamic dimension sizes
 /// are extracted from \p source using tensor.dim at each dynamic index.
 /// Suitable for ops where the output shape aligns positionally with one input

@@ -69,8 +69,7 @@ BiasGeluToHip::matchAndRewrite(mlir::Operation *op,
   mlir::Location loc = op->getLoc();
   auto [data, bias] = resolveDataAndBias(op->getOperand(0), op->getOperand(1));
 
-  auto resultType =
-      mlir::dyn_cast<mlir::RankedTensorType>(op->getResult(0).getType());
+  auto resultType = getRankedResultLike(op, 0, data);
   if (!resultType)
     return rewriter.notifyMatchFailure(op, "BiasGelu expects ranked output");
 

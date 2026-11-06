@@ -74,8 +74,7 @@ FastGeluToHip::matchAndRewrite(mlir::Operation *op,
       return rewriter.notifyMatchFailure(op, "bias must be a 1D tensor");
   }
 
-  auto resultType =
-      mlir::dyn_cast<mlir::RankedTensorType>(op->getResult(0).getType());
+  auto resultType = getRankedResultLike(op, 0, input);
   if (!resultType)
     return rewriter.notifyMatchFailure(op, "FastGelu expects ranked output");
 

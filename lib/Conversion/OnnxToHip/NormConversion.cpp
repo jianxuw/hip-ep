@@ -802,7 +802,10 @@ SkipLayerNormToHip::matchAndRewrite(mlir::Operation *op,
   if (auto a = op->getAttrOfType<mlir::FloatAttr>("epsilon"))
     epsValue = a.getValue();
 
-  auto inputType = mlir::cast<mlir::RankedTensorType>(input.getType());
+  auto inputType = mlir::dyn_cast<mlir::RankedTensorType>(input.getType());
+  if (!inputType)
+    return rewriter.notifyMatchFailure(
+        op, "SkipLayerNormalization requires ranked input");
 
   // === 1. sum = (input + bias) + skip. This is output[3]. ==================
   // Dynamic extents live on `input`; the bias is a static trailing vector, so
@@ -820,8 +823,10 @@ SkipLayerNormToHip::matchAndRewrite(mlir::Operation *op,
                         .getResult(0);
 
   // === 2. output = LayerNorm(sum, gamma, beta, epsilon) =====================
-  auto outputType =
-      mlir::cast<mlir::RankedTensorType>(op->getResult(0).getType());
+  auto outputType = getRankedResultLike(op, 0, input);
+  if (!outputType)
+    return rewriter.notifyMatchFailure(
+        op, "cannot infer normalization output rank");
   mlir::Value outputInit = createEmptyTensor(rewriter, loc, outputType, input);
 
   // hip.layer_norm uses AttrSizedOperandSegments: [ctx, input, scale, bias?,
@@ -1256,9 +1261,10 @@ LayerNormToHip::matchAndRewrite(mlir::Operation *op,
     stashType = a.getSInt();
 
   // First output (Y) is required and dictates the result shape.
-  auto outputType =
-      mlir::cast<mlir::RankedTensorType>(op->getResult(0).getType());
-  mlir::Value outputInit = createEmptyTensor(rewriter, loc, outputType, input);
+  auto outputType = getRankedResultLike(op, 0, input);
+  if (!outputType)
+    return rewriter.notifyMatchFailure(
+        op, "cannot infer LayerNormalization output rank");
 
   // Optional Mean (output 1) and InvStdDev (output 2). Each is real iff the
   // corresponding ONNX result is a non-None ranked tensor.
@@ -1268,13 +1274,24 @@ LayerNormToHip::matchAndRewrite(mlir::Operation *op,
   mlir::Value meanInit, invStdInit;
   mlir::RankedTensorType meanType, invStdType;
   if (meanResult) {
-    meanType = mlir::cast<mlir::RankedTensorType>(meanResult.getType());
-    meanInit = createEmptyTensor(rewriter, loc, meanType, input);
+    meanType = mlir::dyn_cast<mlir::RankedTensorType>(meanResult.getType());
+    if (!meanType)
+      return rewriter.notifyMatchFailure(
+          op, "LayerNormalization mean requires ranked type");
   }
   if (invStdResult) {
-    invStdType = mlir::cast<mlir::RankedTensorType>(invStdResult.getType());
-    invStdInit = createEmptyTensor(rewriter, loc, invStdType, input);
+    invStdType = mlir::dyn_cast<mlir::RankedTensorType>(invStdResult.getType());
+    if (!invStdType)
+      return rewriter.notifyMatchFailure(
+          op, "LayerNormalization variance requires ranked type");
   }
+
+  // Validate every requested type before inserting any replacement IR.
+  mlir::Value outputInit = createEmptyTensor(rewriter, loc, outputType, input);
+  if (meanType)
+    meanInit = createEmptyTensor(rewriter, loc, meanType, input);
+  if (invStdType)
+    invStdInit = createEmptyTensor(rewriter, loc, invStdType, input);
 
   // hip.layer_norm uses AttrSizedOperandSegments for [ctx, input, scale,
   // bias?, outputs*]. The Variadic outputs region must be contiguous, so we

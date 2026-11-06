@@ -64,6 +64,16 @@ breaks every downstream pass that does rank-aware reasoning (the
 
 ## What each side owns
 
+Shape-preserving ONNX-to-HIP converters can recover a missing result rank
+from a ranked input at the point of lowering. Quantized matmul instead keeps
+the activation's leading dimensions and replaces its trailing dimension with
+`N`; binary elementwise operations use their operands' broadcast shape.
+This local refinement does not replace importer shape inference. If the
+necessary operand ranks are also unknown, conversion must decline safely,
+without casting an `UnrankedTensorType` to `RankedTensorType`. Regression
+coverage for fused vision MLP chains lives in
+`test/lit/Conversion/onnx-to-hip/test_unranked_vision_results.mlir`.
+
 ### Importer side: morphizen (`morphizen`)
 
 - **`mlir-imp/src/mlir-constants.cpp::onnxElementTypeToMlirType`** is

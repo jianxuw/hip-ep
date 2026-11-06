@@ -50,8 +50,10 @@ AddToHip::matchAndRewrite(mlir::Operation *op,
   mlir::Location loc = op->getLoc();
   mlir::Value a = op->getOperand(0);
   mlir::Value b = op->getOperand(1);
-  auto resultType =
-      mlir::cast<mlir::RankedTensorType>(op->getResult(0).getType());
+  auto resultType = getBroadcastResultType(op, a, b);
+  if (!resultType)
+    return rewriter.notifyMatchFailure(
+        op, "cannot infer a ranked broadcast result");
 
   mlir::FailureOr<mlir::Value> initOrFailure =
       createBroadcastEmptyTensor(rewriter, loc, resultType, {a, b});
@@ -76,8 +78,10 @@ MulToHip::matchAndRewrite(mlir::Operation *op,
   mlir::Location loc = op->getLoc();
   mlir::Value a = op->getOperand(0);
   mlir::Value b = op->getOperand(1);
-  auto resultType =
-      mlir::cast<mlir::RankedTensorType>(op->getResult(0).getType());
+  auto resultType = getBroadcastResultType(op, a, b);
+  if (!resultType)
+    return rewriter.notifyMatchFailure(
+        op, "cannot infer a ranked broadcast result");
 
   mlir::FailureOr<mlir::Value> initOrFailure =
       createBroadcastEmptyTensor(rewriter, loc, resultType, {a, b});
@@ -102,8 +106,10 @@ SubToHip::matchAndRewrite(mlir::Operation *op,
   mlir::Location loc = op->getLoc();
   mlir::Value lhs = op->getOperand(0);
   mlir::Value rhs = op->getOperand(1);
-  auto resultType =
-      mlir::cast<mlir::RankedTensorType>(op->getResult(0).getType());
+  auto resultType = getBroadcastResultType(op, a, b);
+  if (!resultType)
+    return rewriter.notifyMatchFailure(
+        op, "cannot infer a ranked broadcast result");
   mlir::FailureOr<mlir::Value> initOrFailure =
       createBroadcastEmptyTensor(rewriter, loc, resultType, {lhs, rhs});
   if (mlir::failed(initOrFailure))
