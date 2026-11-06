@@ -100,6 +100,10 @@ jobs:
         with:
           python-version: "3.14"
 
+      - name: Check LLVM patch checkout and application
+        if: steps.cache-llvm.outputs.cache-hit != 'true'
+        run: python source-hip-ep/cmake/tests/test_llvm_patch_checkout.py
+
       - name: Setup MSVC environment
         if: steps.cache-llvm.outputs.cache-hit != 'true'
         uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0

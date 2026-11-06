@@ -9,7 +9,7 @@ diff --git a/external/llvm-project/llvm/lib/Support/Windows/Threading.inc b/exte
 @@ -45,6 +45,11 @@ void llvm_thread_detach_impl(HANDLE hThread) {
      ReportLastErrorFatal("CloseHandle failed");
  }
-
+ 
 -DWORD llvm_thread_get_id_impl(HANDLE hThread) { return ::GetThreadId(hThread); }
 +DWORD llvm_thread_get_id_impl(HANDLE hThread) {
 +  // Default-constructed and moved-from threads have no native handle.
@@ -17,5 +17,5 @@ diff --git a/external/llvm-project/llvm/lib/Support/Windows/Threading.inc b/exte
 +    return 0;
 +  return ::GetThreadId(hThread);
 +}
-
+ 
  DWORD llvm_thread_get_current_id_impl() { return ::GetCurrentThreadId(); }

@@ -1,5 +1,8 @@
 *.onnx filter=lfs diff=lfs merge=lfs -text
 
+# Unified-diff context prefixes and line endings must survive Windows checkout.
+*.patch text eol=lf whitespace=-blank-at-eol
+
 # Force UTF-8 for all source files. Prevents Windows editors from saving a
 # Latin-1 / CP1252 round-trip view of UTF-8 comments back as broken UTF-8
 # (e.g. `→` -> `â†’`, `α` -> `Î±`). See PR #213 review for the prior occurrence.
